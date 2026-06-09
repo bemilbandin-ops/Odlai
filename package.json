@@ -1,0 +1,14 @@
+{
+  "name": "odlai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && node scripts/dev-server.mjs",
+    "build": "tsc && node scripts/build.mjs",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node scripts/validate-catalog.mjs && node scripts/safety-scan.mjs",
+    "preview": "node scripts/dev-server.mjs"
+  }
+}
