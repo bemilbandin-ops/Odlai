@@ -62,22 +62,42 @@ const setMeta = (title: string, description: string): void => {
 
 const link = (href: string, text: string, className = ''): string => `<a class="${className}" href="#${href}">${text}</a>`;
 
-const productCard = (product: Product): string => `
-  <article class="card product-card">
-    <a class="product-image" href="#/products/${product.slug}" aria-label="Visa ${escapeHtml(product.name)}"><span>${product.image}</span></a>
-    <div class="card-body">
-      <div class="badge-row"><span class="badge ${product.stockStatus}">${stockLabel(product.stockStatus)}</span>${product.beginnerFriendly ? '<span class="badge soft">Enkel start</span>' : ''}</div>
-      <h3>${link(`/products/${product.slug}`, escapeHtml(product.name))}</h3>
-      <p>${escapeHtml(product.shortDescription)}</p>
-      <div class="card-row"><strong>${formatPrice(product.price)}</strong>${link(`/products/${product.slug}`, 'Visa produkt', 'button ghost')}</div>
-    </div>
-  </article>`;
+const isActiveHref = (href: string): boolean => {
+  const current = path().split('?')[0];
+  if (href === '/') return current === '/';
+  return current === href || current.startsWith(`${href}/`);
+};
+
+const navLink = (href: string, text: string): string => link(href, text, isActiveHref(href) ? 'active' : '');
+
+const categoryTone = (slug: string): string => slug.replace(/[^a-z0-9-]/gi, '');
+
+const productVisual = (product: Product): string => {
+  const category = getCategory(product.categorySlug);
+  return `<span class="visual-card visual-${categoryTone(product.categorySlug)}" aria-hidden="true"><span class="visual-shelf"></span><span class="visual-plant"></span><span class="visual-label">${escapeHtml(category?.name ?? 'Odlai')}</span></span>`;
+};
+
+const categoryVisual = (slug: string, name: string): string => `<span class="category-visual visual-${categoryTone(slug)}" aria-hidden="true"><span>${escapeHtml(name.slice(0, 2).toUpperCase())}</span></span>`;
+
+const productCard = (product: Product): string => {
+  const category = getCategory(product.categorySlug);
+  return `
+    <article class="card product-card">
+      <a class="product-image" href="#/products/${product.slug}" aria-label="Visa ${escapeHtml(product.name)}">${productVisual(product)}</a>
+      <div class="card-body">
+        <div class="badge-row"><span class="badge category-badge">${escapeHtml(category?.name ?? 'Produkt')}</span><span class="badge ${product.stockStatus}">${stockLabel(product.stockStatus)}</span></div>
+        <h3>${link(`/products/${product.slug}`, escapeHtml(product.name), 'product-title-link')}</h3>
+        <p>${escapeHtml(product.shortDescription)}</p>
+        <div class="card-row"><strong>${formatPrice(product.price)}</strong>${link(`/products/${product.slug}`, 'Visa produkt', 'button card-button')}</div>
+      </div>
+    </article>`;
+};
 
 const shell = (content: string): string => `
   <header class="site-header">
     <a class="brand" href="#/" aria-label="Odlai startsida"><span class="brand-mark">O</span><span><strong>Odlai</strong><small>Utrustning för odling inomhus</small></span></a>
-    <nav aria-label="Huvudnavigation">${navItems.map(([href, text]) => link(href, text)).join('')}</nav>
-    <a class="cart-link" href="#/cart">Varukorg <span id="cart-count">${cartCount()}</span></a>
+    <nav aria-label="Huvudnavigation">${navItems.map(([href, text]) => navLink(href, text)).join('')}</nav>
+    <a class="cart-link ${isActiveHref('/cart') ? 'active' : ''}" href="#/cart"><span>Varukorg</span> <span id="cart-count">${cartCount()}</span></a>
   </header>
   <main id="main-content">${content}</main>
   <footer class="site-footer">
@@ -88,16 +108,28 @@ const shell = (content: string): string => `
   </footer>`;
 
 const home = (): string => `
-  <section class="hero">
-    <div><p class="eyebrow">Svensk webbshop för växtvård</p><h1>Allt för en frisk odlingsplats hemma.</h1><p>Välj växtbelysning, odlingstält, ventilation, substrat och smarta tillbehör för örter, chili, tomater, bladgrönt och prydnadsväxter.</p><div class="actions">${link('/products', 'Handla produkter', 'button')} ${link('/categories', 'Se kategorier', 'button ghost')}</div></div>
-    <div class="hero-panel" role="img" aria-label="Illustration av växter på odlingshylla"><span>🌿</span><span>☀️</span><span>🪴</span></div>
+  <section class="hero storefront-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Svensk webbshop för inomhusodling</p>
+      <h1>Gör plats för friskare växter hemma.</h1>
+      <p class="lead">Odlai samlar växtbelysning, ventilation, odlingstält och smart växtvård för kryddväxter, chili, tomater, bladgrönt och prydnadsväxter.</p>
+      <div class="actions">${link('/products', 'Handla sortimentet', 'button')} ${link('/guides', 'Få starthjälp', 'button ghost')}</div>
+    </div>
+    <aside class="hero-shop-panel" aria-label="Utvalda områden för odling hemma">
+      <div class="panel-card panel-main"><span class="panel-visual"></span><strong>Ljushylla för köket</strong><small>LED, timer och såbrickor</small></div>
+      <div class="panel-card"><span class="panel-line"></span><strong>Klimatkontroll</strong><small>Luftflöde och mätning</small></div>
+      <div class="panel-card"><span class="panel-line short"></span><strong>Fröstart</strong><small>Enkel väg till plantor</small></div>
+    </aside>
   </section>
-  <section><div class="section-heading"><div><p class="eyebrow">Populära kategorier</p><h2>Bygg din odlingshörna steg för steg</h2></div>${link('/products', 'Alla produkter', 'section-link')}</div><div class="grid categories">${getCategories().slice(0, 6).map((category) => `<article class="card category-card"><div class="emoji">${category.image}</div><h3>${link(`/categories/${category.slug}`, category.name)}</h3><p>${category.description}</p></article>`).join('')}</div></section>
-  <section class="value-grid"><article><h2>Rätt ljus</h2><p>Ljuskällor och upphängning för små fönsterodlingar, hyllor och större odlingsytor.</p></article><article><h2>Stabilt klimat</h2><p>Ventilation och mätare som gör det enklare att hålla koll på temperatur och luftfuktighet.</p></article><article><h2>Snygg ordning</h2><p>Krukor, brickor och märkning som får odlingen att kännas genomtänkt i hemmet.</p></article></section>
-  <section><div class="section-heading"><div><p class="eyebrow">Utvalt sortiment</p><h2>Populärt just nu</h2></div>${link('/products', 'Visa fler', 'section-link')}</div><div class="grid products">${getFeaturedProducts().map(productCard).join('')}</div></section>
-  <section class="trust"><div><p class="eyebrow">Odlai hjälper dig välja</p><h2>En renare butik för inomhusodling</h2></div><p>Sortimentet presenteras med tydliga användningsområden, lugna råd och svensk butikskänsla så att du kan jämföra utrustning utan krångel.</p></section>`;
+  <section><div class="section-heading"><div><p class="eyebrow">Handla efter behov</p><h2>Kategorier för en ordnad odlingsplats</h2></div>${link('/categories', 'Alla kategorier', 'section-link')}</div><div class="grid categories category-grid">${getCategories().slice(0, 6).map((category) => `<article class="card category-card">${categoryVisual(category.slug, category.name)}<h3>${link(`/categories/${category.slug}`, category.name)}</h3><p>${category.description}</p></article>`).join('')}</div></section>
+  <section><div class="section-heading"><div><p class="eyebrow">Utvalt sortiment</p><h2>Populära val för hobbyodling</h2></div>${link('/products', 'Visa alla produkter', 'section-link')}</div><div class="grid products">${getFeaturedProducts().map(productCard).join('')}</div></section>
+  <section class="beginner-help"><div><p class="eyebrow">Ny på inomhusodling?</p><h2>Börja med rätt kombination</h2><p>Välj först plats och växttyp. Komplettera sedan med jämnt ljus, stabil luft och krukor som passar vardagen. Våra guider hjälper dig jämföra utan krångel.</p></div><div class="help-steps"><article><strong>1</strong><span>Välj yta och växter</span></article><article><strong>2</strong><span>Lägg till ljus och timer</span></article><article><strong>3</strong><span>Följ temperatur och fukt</span></article></div></section>
+  <section class="trust-strip"><span>Svensk text och priser i SEK</span><span>Laglig och neutral växtvård</span><span>Tydliga kategorier för hemmet</span><span>Demobutik utan livebetalning</span></section>
+  <section class="newsletter contact-band"><div><p class="eyebrow">Håll kontakten</p><h2>Få lugna tips för odling inomhus</h2><p>Registrera e-post för en lokal demobekräftelse med fokus på kryddväxter, fröstart och växtvård.</p></div><form data-newsletter><label>E-post<input type="email" required placeholder="namn@example.se"></label><button class="button" type="submit">Anmäl intresse</button></form><p class="form-note" aria-live="polite"></p></section>`;
 
 const filtersFromUrl = (): URLSearchParams => new URLSearchParams(path().split('?')[1] ?? '');
+
+const selected = (value: string, current: string): string => value === current ? ' selected' : '';
 
 const productsPage = (categorySlug?: string): string => {
   const params = filtersFromUrl();
@@ -114,11 +146,11 @@ const productsPage = (categorySlug?: string): string => {
   if (categorySlug && !category) return notFound();
   const title = category ? category.name : 'Alla produkter';
   const action = categorySlug ? `/categories/${categorySlug}` : '/products';
-  return `<section class="page-hero"><p class="breadcrumbs">${link('/', 'Start')} / ${category ? `${link('/categories', 'Kategorier')} / ${category.name}` : 'Produkter'}</p><h1>${title}</h1><p>${category?.description ?? 'Sök, filtrera och jämför utrustning för en trivsam odlingsplats inomhus.'}</p></section>
-    <section class="catalog-layout"><aside class="filters"><h2>Filtrera sortimentet</h2><form data-filters action="#${action}"><label>Sök<input name="q" value="${escapeHtml(params.get('q') ?? '')}" placeholder="Sök produkter"></label><label>Minpris<input name="min" type="number" min="0" value="${escapeHtml(params.get('min') ?? '')}"></label><label>Maxpris<input name="max" type="number" min="0" value="${escapeHtml(params.get('max') ?? '')}"></label><label>Sortera<select name="sort"><option value="featured">Utvalt</option><option value="price-asc">Pris stigande</option><option value="price-desc">Pris fallande</option><option value="name">Namn</option></select></label><label class="check"><input name="beginner" type="checkbox" ${params.get('beginner') === '1' ? 'checked' : ''}> Enkel start</label><label class="check"><input name="stock" type="checkbox" ${params.get('stock') === '1' ? 'checked' : ''}> I lager</label><button class="button" type="submit">Uppdatera</button>${link(action, 'Rensa filter', 'button ghost')}</form></aside><div class="catalog-results"><div class="catalog-toolbar"><p>${products.length} produkter visas</p></div>${products.length ? `<div class="grid products">${products.map(productCard).join('')}</div>` : '<div class="empty"><h2>Inga produkter hittades</h2><p>Prova bredare sökning eller ta bort något filter.</p></div>'}</div></section>`;
+  return `<section class="page-hero catalog-hero"><p class="breadcrumbs">${link('/', 'Start')} / ${category ? `${link('/categories', 'Kategorier')} / ${category.name}` : 'Produkter'}</p><p class="eyebrow">Odlai sortiment</p><h1>${title}</h1><p>${category?.description ?? 'Sök, filtrera och jämför utrustning för ljus, luft, fröstart och växtvård i hemmet.'}</p><div class="catalog-quicklinks">${getCategories().slice(0, 5).map((item) => link(`/categories/${item.slug}`, item.name)).join('')}</div></section>
+    <section class="catalog-layout"><aside class="filters"><div class="filters-heading"><p class="eyebrow">Hitta rätt</p><h2>Filtrera sortimentet</h2></div><form data-filters action="#${action}"><label>Sök produkt<input name="q" value="${escapeHtml(params.get('q') ?? '')}" placeholder="Sök ljus, krukor eller mätare"></label><div class="filter-prices"><label>Minpris<input name="min" type="number" min="0" value="${escapeHtml(params.get('min') ?? '')}"></label><label>Maxpris<input name="max" type="number" min="0" value="${escapeHtml(params.get('max') ?? '')}"></label></div><label>Sortera<select name="sort"><option value="featured"${selected('featured', params.get('sort') ?? 'featured')}>Utvalt först</option><option value="price-asc"${selected('price-asc', params.get('sort') ?? 'featured')}>Pris stigande</option><option value="price-desc"${selected('price-desc', params.get('sort') ?? 'featured')}>Pris fallande</option><option value="name"${selected('name', params.get('sort') ?? 'featured')}>Namn A–Ö</option></select></label><label class="check"><input name="beginner" type="checkbox" ${params.get('beginner') === '1' ? 'checked' : ''}> Visa enkel start</label><label class="check"><input name="stock" type="checkbox" ${params.get('stock') === '1' ? 'checked' : ''}> Endast i lager</label><button class="button" type="submit">Uppdatera filter</button>${link(action, 'Rensa filter', 'button ghost')}</form></aside><div class="catalog-results"><div class="catalog-toolbar"><div><p>${products.length} produkter visas</p><span>Jämför produkter efter användning, pris och lagerstatus.</span></div></div>${products.length ? `<div class="grid products catalog-grid">${products.map(productCard).join('')}</div>` : '<div class="empty catalog-empty"><h2>Inga produkter matchar dina val</h2><p>Prova att söka bredare, höja maxpriset eller rensa filtren för att se hela sortimentet för inomhusodling.</p></div>'}</div></section>`;
 };
 
-const categoriesPage = (): string => `<section class="page-hero"><p class="breadcrumbs">${link('/', 'Start')} / Kategorier</p><h1>Kategorier</h1><p>Välj område efter vad din odlingsplats behöver.</p></section><div class="grid categories">${getCategories().map((category) => `<article class="card category-card"><div class="emoji">${category.image}</div><h2>${link(`/categories/${category.slug}`, category.name)}</h2><p>${category.description}</p><p>${getProductsByCategory(category.slug).length} produkter</p></article>`).join('')}</div>`;
+const categoriesPage = (): string => `<section class="page-hero"><p class="breadcrumbs">${link('/', 'Start')} / Kategorier</p><h1>Kategorier</h1><p>Välj område efter vad din odlingsplats behöver.</p></section><div class="grid categories">${getCategories().map((category) => `<article class="card category-card">${categoryVisual(category.slug, category.name)}<h2>${link(`/categories/${category.slug}`, category.name)}</h2><p>${category.description}</p><p>${getProductsByCategory(category.slug).length} produkter</p></article>`).join('')}</div>`;
 
 const productPage = (slug?: string): string => {
   const product = slug ? getProduct(slug) : undefined;
